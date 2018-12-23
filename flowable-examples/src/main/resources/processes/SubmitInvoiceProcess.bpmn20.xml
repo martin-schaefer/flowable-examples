@@ -1,0 +1,37 @@
+<definitions id="definitions"
+	xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+	xmlns:flowable="http://flowable.org/bpmn" targetNamespace="ch.schaefer.flowable">
+
+	<message id="invoiceResponseMessageRef" name="invoiceResponseMessage" />
+
+	<process id="SubmitInvoiceProcess" name="Submit Invoice Process" isExecutable="true">
+
+		<startEvent id="start" name="Start" />
+
+		<sequenceFlow id="start-submitInvoiceTask" sourceRef="start" targetRef="submitInvoiceTask" />
+
+		<serviceTask id="submitInvoiceTask" flowable:async="true" flowable:expression="#{invoiceService.submit(invoiceNumber)}">
+			<extensionElements>
+				<flowable:failedJobRetryTimeCycle>R5/PT2S</flowable:failedJobRetryTimeCycle>
+			</extensionElements>
+		</serviceTask>
+
+		<sequenceFlow id="submitInvoiceTask-catchInvoiceResponseEvent" sourceRef="submitInvoiceTask" targetRef="catchInvoiceResponseEvent" />
+
+		<intermediateCatchEvent id="catchInvoiceResponseEvent">
+			<messageEventDefinition messageRef="invoiceResponseMessageRef" />
+		</intermediateCatchEvent>
+
+		<boundaryEvent id="invoiceResponseTimeout" cancelActivity="true" attachedToRef="catchInvoiceResponseEvent">
+			<timerEventDefinition>
+				<timeDuration>PT4H</timeDuration>
+			</timerEventDefinition>
+		</boundaryEvent>
+
+		<sequenceFlow id="catchInvoiceResponseEvent-end" sourceRef="catchInvoiceResponseEvent" targetRef="end" />
+
+		<endEvent id="end" name="End" />
+
+	</process>
+
+</definitions>
