@@ -1,6 +1,9 @@
-<definitions id="definitions"
-	xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
-	xmlns:flowable="http://flowable.org/bpmn" targetNamespace="ch.schaefer.flowable">
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:flowable="http://flowable.org/bpmn"
+  typeLanguage="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="http://www.flowable.org/processdef">
 
 	<message id="invoiceResponseMessageRef" name="invoiceResponseMessage" />
 
@@ -12,7 +15,7 @@
 
 		<serviceTask id="submitInvoiceTask" flowable:async="true" flowable:expression="#{invoiceService.submit(invoiceNumber)}">
 			<extensionElements>
-				<flowable:failedJobRetryTimeCycle>R5/PT2S</flowable:failedJobRetryTimeCycle>
+				<flowable:failedJobRetryTimeCycle>R5/PT1S</flowable:failedJobRetryTimeCycle>
 			</extensionElements>
 		</serviceTask>
 
@@ -28,8 +31,25 @@
 			</timerEventDefinition>
 		</boundaryEvent>
 
-		<sequenceFlow id="catchInvoiceResponseEvent-end" sourceRef="catchInvoiceResponseEvent" targetRef="end" />
+		<sequenceFlow id="catchInvoiceResponseEvent-invoiceResponseGateway" sourceRef="catchInvoiceResponseEvent" targetRef="invoiceResponseGateway" />
 
+		<exclusiveGateway id="invoiceResponseGateway" name="Invoice Response Gateway" />
+
+			<sequenceFlow id="invoiceResponseGateway-saveInvoiceResponseTask" sourceRef="invoiceResponseGateway" targetRef="saveInvoiceResponseTask">
+				<conditionExpression xsi:type="tFormalExpression">${variables:exists(invoiceResponse)}</conditionExpression>
+			</sequenceFlow>
+		
+			<sequenceFlow id="invoiceResponseGateway-noInvoiceResponseTask" sourceRef="invoiceResponseGateway" targetRef="noInvoiceResponseTask" />
+
+
+		<serviceTask id="saveInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.setInvoiceResponse(invoiceResponse)}" />
+
+		<sequenceFlow id="saveInvoiceResponseTask-end" sourceRef="saveInvoiceResponseTask" targetRef="end" />
+
+		<serviceTask id="noInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.noInvoiceResponse(invoiceNumber)}" />
+
+		<sequenceFlow id="noInvoiceResponseTask-end" sourceRef="noInvoiceResponseTask" targetRef="end" />
+	
 		<endEvent id="end" name="End" />
 
 	</process>

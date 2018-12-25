@@ -1,5 +1,6 @@
 package ch.schaefer.flowable;
 
+import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.flowable.engine.RuntimeService;
@@ -18,47 +19,50 @@ public class SubmitInvoiceProcessTest {
 	@Autowired
 	private RuntimeService runtimeService;
 
+	@Autowired
+	private InvoiceService invoiceService;
+
 	@Test
-	public void startSubmitInvoiceProcess() throws InterruptedException {
+	public void executeSubmitInvoiceProcess_withTwoInitialFails_shouldReceiveInviceResponse() {
 
 		// --- given
 		String invoiceNumber = "R1020304050";
+		invoiceService.setInvoiceSubmitted(false);
+		invoiceService.setInvoiceResponse(null);
+		invoiceService.setFails(2);
 
 		// --- when
-		ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder()
-				.processDefinitionKey("SubmitInvoiceProcess").businessKey(invoiceNumber)
-				.variable("invoiceNumber", invoiceNumber).name("Submit Invoce " + invoiceNumber).start();
+		ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder().processDefinitionKey("SubmitInvoiceProcess").businessKey(invoiceNumber)
+				.variable("invoiceNumber", invoiceNumber).name("Submit Invoice " + invoiceNumber).start();
 
-		// --- then
-
-		// wait for the async submitInvoiceTask to end
+		// wait until invoice was submitted
 		do {
 			sleep(100);
-		} while (runtimeService.createExecutionQuery().processInstanceId(processInstance.getId())
-				.activityId("submitInvoiceTask").singleResult() != null);
+		} while (!invoiceService.isInvoiceSubmitted());
 
+		// Let some time pass before the invoiceResponseMessage arrives
 		sleep(1000);
-		assertThat(runtimeService.createProcessInstanceQuery().processInstanceBusinessKey(invoiceNumber).singleResult())
-				.isNotNull();
 
 		// Find the execution waiting for the invoiceResponseMessage
 		Execution execution = runtimeService.createExecutionQuery().processInstanceBusinessKey(invoiceNumber, true)
 				.messageEventSubscriptionName("invoiceResponseMessage").singleResult();
 
-		sleep(1000);
+		// fire the invoiceResponseMessage event to the execution
+		runtimeService.messageEventReceived("invoiceResponseMessage", execution.getId(), singletonMap("invoiceResponse", true));
 
-		// fire the invoiceResponseMessage event
-		runtimeService.messageEventReceived("invoiceResponseMessage", execution.getId());
+		// let the process terminate
+		sleep(100);
 
-		// wait for the process to end
-		do {
-			sleep(100);
-		} while (runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId())
-				.singleResult() != null);
+		// --- then
 
+		// assert that the process is terminated and the invoiceResponseMessage was
+		// saved
+		assertThat(runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).singleResult()).isNull();
+		assertThat(invoiceService.isInvoiceSubmitted()).isTrue();
+		assertThat(invoiceService.getInvoiceResponse()).isTrue();
 	}
 
-	private void sleep(long millis) throws InterruptedException {
+	private void sleep(long millis) {
 		try {
 			Thread.sleep(millis);
 		} catch (InterruptedException e) {
