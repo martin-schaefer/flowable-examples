@@ -3,6 +3,11 @@ package ch.schaefer.flowable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * The Invoice is used as JSON process variable for the SubmitInvoiceProcess.
+ * 
+ * @author Martin Schäfer
+ */
 public class Invoice {
 
 	private String invoiceNumber;

@@ -8,18 +8,23 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * The InvoiceService provides the methods invoked by the SubmitInvoiceProcess. It is not a real-word service but rather a mock to test the process flow.
+ * 
+ * @author Martin Schäfer
+ */
 @Service
 public class InvoiceService {
 
-	private Boolean invoiceResponse;
+	private InvoiceResponse invoiceResponse;
 	private boolean invoiceSubmitted;
 	private int fails;
 	private int attempt;
 
-	private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
-
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
 
 	public void submit(JsonNode invoiceNode) {
 		Invoice invoice = objectMapper.convertValue(invoiceNode, Invoice.class);
@@ -36,12 +41,19 @@ public class InvoiceService {
 		log.info("No response received for invoice {}", invoiceNumber);
 	}
 
-	public void setInvoiceResponse(Boolean invoiceResponse) {
-		this.invoiceResponse = invoiceResponse;
+	public void receive(JsonNode invoiceResponseNode) {
+		this.invoiceResponse = objectMapper.convertValue(invoiceResponseNode, InvoiceResponse.class);
 	}
 
-	public Boolean getInvoiceResponse() {
+	public InvoiceResponse getInvoiceResponse() {
 		return invoiceResponse;
+	}
+
+	public void clear() {
+		this.attempt = 0;
+		this.fails = 0;
+		this.invoiceSubmitted = false;
+		this.invoiceResponse = null;
 	}
 
 	public void setFails(int fails) {
@@ -50,10 +62,6 @@ public class InvoiceService {
 
 	public boolean isInvoiceSubmitted() {
 		return invoiceSubmitted;
-	}
-
-	public void setInvoiceSubmitted(boolean invoiceSubmitted) {
-		this.invoiceSubmitted = invoiceSubmitted;
 	}
 
 }

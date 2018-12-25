@@ -27,7 +27,7 @@
 
 		<boundaryEvent id="invoiceResponseTimeout" cancelActivity="true" attachedToRef="catchInvoiceResponseEvent">
 			<timerEventDefinition>
-				<timeDuration>PT4H</timeDuration>
+				<timeDuration>PT1S</timeDuration>
 			</timerEventDefinition>
 		</boundaryEvent>
 
@@ -42,7 +42,7 @@
 			<sequenceFlow id="invoiceResponseGateway-noInvoiceResponseTask" sourceRef="invoiceResponseGateway" targetRef="noInvoiceResponseTask" />
 
 
-		<serviceTask id="saveInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.setInvoiceResponse(invoiceResponse)}" />
+		<serviceTask id="saveInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.receive(invoiceResponse)}" />
 
 		<sequenceFlow id="saveInvoiceResponseTask-end" sourceRef="saveInvoiceResponseTask" targetRef="end" />
 

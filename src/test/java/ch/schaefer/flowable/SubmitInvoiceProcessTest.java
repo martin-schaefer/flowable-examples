@@ -18,6 +18,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * Test cases for the SubmitInvoiceProcess.
+ * 
+ * @author Martin Schäfer
+ */
 @SpringBootTest
 @RunWith(SpringRunner.class)
 public class SubmitInvoiceProcessTest {
@@ -32,7 +37,7 @@ public class SubmitInvoiceProcessTest {
 	private ObjectMapper objectMapper;
 
 	@Test
-	public void executeSubmitInvoiceProcess_withTwoInitialFails_shouldReceiveInviceResponse() {
+	public void executeSubmitInvoiceProcess_withTwoInitialFails_shouldReceiveInvoiceResponse() {
 
 		// --- given
 		Invoice invoice = new Invoice();
@@ -40,8 +45,7 @@ public class SubmitInvoiceProcessTest {
 		invoice.setAmount(new BigDecimal("245.00"));
 		invoice.setInvoiceDate(LocalDate.of(2019, 7, 31));
 		invoice.setRemarks("remarks");
-		invoiceService.setInvoiceSubmitted(false);
-		invoiceService.setInvoiceResponse(null);
+		invoiceService.clear();
 		invoiceService.setFails(2);
 
 		// --- when
@@ -55,25 +59,27 @@ public class SubmitInvoiceProcessTest {
 		} while (!invoiceService.isInvoiceSubmitted());
 
 		// Let some time pass before the invoiceResponseMessage arrives
-		sleep(1000);
+		sleep(500);
 
 		// Find the execution waiting for the invoiceResponseMessage
 		Execution execution = runtimeService.createExecutionQuery().processInstanceBusinessKey(invoice.getInvoiceNumber(), true)
 				.messageEventSubscriptionName("invoiceResponseMessage").singleResult();
 
 		// fire the invoiceResponseMessage event to the execution
-		runtimeService.messageEventReceived("invoiceResponseMessage", execution.getId(), singletonMap("invoiceResponse", true));
+		runtimeService.messageEventReceived("invoiceResponseMessage", execution.getId(),
+				singletonMap("invoiceResponse", objectMapper.convertValue(new InvoiceResponse(true, "message"), JsonNode.class)));
 
-		// let the process terminate
-		sleep(100);
+		// wait until the process terminates
+		do {
+			sleep(100);
+		} while (runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count() != 0);
 
 		// --- then
 
-		// assert that the process is terminated and the invoiceResponseMessage was
-		// saved
-		assertThat(runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).singleResult()).isNull();
+		// assert that the InvoiceResponseMessage was saved
 		assertThat(invoiceService.isInvoiceSubmitted()).isTrue();
-		assertThat(invoiceService.getInvoiceResponse()).isTrue();
+		assertThat(invoiceService.getInvoiceResponse().isOk()).isTrue();
+		assertThat(invoiceService.getInvoiceResponse().getMessage()).isEqualTo("message");
 	}
 
 	private void sleep(long millis) {
