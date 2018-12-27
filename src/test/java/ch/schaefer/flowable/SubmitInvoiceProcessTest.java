@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.flowable.engine.ManagementService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -31,6 +32,9 @@ public class SubmitInvoiceProcessTest {
 	private RuntimeService runtimeService;
 
 	@Autowired
+	private ManagementService managementService;
+
+	@Autowired
 	private InvoiceService invoiceService;
 
 	@Autowired
@@ -40,11 +44,7 @@ public class SubmitInvoiceProcessTest {
 	public void executeSubmitInvoiceProcess_withTwoInitialFails_shouldReceiveInvoiceResponse() {
 
 		// --- given
-		Invoice invoice = new Invoice();
-		invoice.setInvoiceNumber("R1020304050");
-		invoice.setAmount(new BigDecimal("245.00"));
-		invoice.setInvoiceDate(LocalDate.of(2019, 7, 31));
-		invoice.setRemarks("remarks");
+		Invoice invoice = givenInvoice();
 		invoiceService.clear();
 		invoiceService.setFails(2);
 
@@ -53,10 +53,7 @@ public class SubmitInvoiceProcessTest {
 				.businessKey(invoice.getInvoiceNumber()).variable("invoice", objectMapper.convertValue(invoice, JsonNode.class))
 				.name("Submit Invoice " + invoice.getInvoiceNumber()).start();
 
-		// wait until invoice was submitted
-		do {
-			sleep(100);
-		} while (!invoiceService.isInvoiceSubmitted());
+		waitForSubmitInvoiceTaskCompletion(processInstance);
 
 		// Let some time pass before the invoiceResponseMessage arrives
 		sleep(500);
@@ -76,10 +73,54 @@ public class SubmitInvoiceProcessTest {
 
 		// --- then
 
-		// assert that the InvoiceResponseMessage was saved
+		// assert that the InvoiceResponseMessage was received
 		assertThat(invoiceService.isInvoiceSubmitted()).isTrue();
 		assertThat(invoiceService.getInvoiceResponse().isOk()).isTrue();
 		assertThat(invoiceService.getInvoiceResponse().getMessage()).isEqualTo("message");
+	}
+
+	@Test
+	public void executeSubmitInvoiceProcess_withAllFails_shouldNotReceiveInvoiceResponse() {
+
+		// --- given
+		Invoice invoice = givenInvoice();
+		invoiceService.clear();
+		invoiceService.setFails(3);
+
+		// --- when
+		ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder().processDefinitionKey("SubmitInvoiceProcess")
+				.businessKey(invoice.getInvoiceNumber()).variable("invoice", objectMapper.convertValue(invoice, JsonNode.class))
+				.name("Submit Invoice " + invoice.getInvoiceNumber()).start();
+
+		waitForSubmitInvoiceTaskExhaustion(processInstance);
+
+		// --- then
+
+		// assert that the InvoiceResponseMessage was not received
+		assertThat(invoiceService.isInvoiceSubmitted()).isFalse();
+		assertThat(invoiceService.getInvoiceResponse()).isNull();
+	}
+
+	private Invoice givenInvoice() {
+		Invoice invoice = new Invoice();
+		invoice.setInvoiceNumber("R1020304050");
+		invoice.setAmount(new BigDecimal("245.00"));
+		invoice.setInvoiceDate(LocalDate.of(2019, 7, 31));
+		invoice.setRemarks("remarks");
+		return invoice;
+	}
+
+	private void waitForSubmitInvoiceTaskCompletion(ProcessInstance processInstance) {
+		do {
+			sleep(200);
+		} while (runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).list().stream()
+				.filter(e -> "submitInvoiceTask".equals(e.getActivityId())).findFirst().isPresent());
+	}
+
+	private void waitForSubmitInvoiceTaskExhaustion(ProcessInstance processInstance) {
+		do {
+			sleep(200);
+		} while (managementService.createDeadLetterJobQuery().processInstanceId(processInstance.getId()).count() != 1);
 	}
 
 	private void sleep(long millis) {
