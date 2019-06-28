@@ -50,7 +50,7 @@ public class SubmitInvoiceProcessTest {
 
 		// --- when
 		ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder().processDefinitionKey("SubmitInvoiceProcess")
-				.businessKey(invoice.getInvoiceNumber()).variable("invoice", objectMapper.convertValue(invoice, JsonNode.class))
+				.businessKey(invoice.getInvoiceNumber()).variable("invoice", invoice)
 				.name("Submit Invoice " + invoice.getInvoiceNumber()).start();
 
 		waitForSubmitInvoiceTaskCompletion(processInstance);
@@ -64,7 +64,7 @@ public class SubmitInvoiceProcessTest {
 
 		// fire the invoiceResponseMessage event to the execution
 		runtimeService.messageEventReceived("invoiceResponseMessage", execution.getId(),
-				singletonMap("invoiceResponse", objectMapper.convertValue(new InvoiceResponse(true, "message"), JsonNode.class)));
+				singletonMap("invoiceResponse", new InvoiceResponse(true, "message")));
 
 		// wait until the process terminates
 		do {

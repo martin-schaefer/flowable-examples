@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -26,8 +25,7 @@ public class InvoiceService {
 
 	private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
 
-	public void submit(JsonNode invoiceNode) {
-		Invoice invoice = objectMapper.convertValue(invoiceNode, Invoice.class);
+	public void submit(Invoice invoice) {
 		if (attempt < fails) {
 			attempt++;
 			throw new RuntimeException("Could not submit invoice " + invoice.getInvoiceNumber() + " on attempt " + attempt);
@@ -36,13 +34,13 @@ public class InvoiceService {
 		log.info("Submitted invoice {}", invoice.getInvoiceNumber());
 	}
 
-	public void noInvoiceResponse(String invoiceNumber) {
+	public void noInvoiceResponse(Invoice invoice) {
 		invoiceResponse = null;
-		log.info("No response received for invoice {}", invoiceNumber);
+		log.info("No response received for invoice {}", invoice.getInvoiceNumber());
 	}
 
-	public void receive(JsonNode invoiceResponseNode) {
-		this.invoiceResponse = objectMapper.convertValue(invoiceResponseNode, InvoiceResponse.class);
+	public void receive(InvoiceResponse invoiceResponse) {
+		this.invoiceResponse = invoiceResponse;
 	}
 
 	public InvoiceResponse getInvoiceResponse() {

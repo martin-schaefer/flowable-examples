@@ -5,6 +5,7 @@ package ch.schaefer.flowable;
  * 
  * @author Martin Schäfer
  */
+@JsonVariable
 public class InvoiceResponse {
 
 	private boolean ok;

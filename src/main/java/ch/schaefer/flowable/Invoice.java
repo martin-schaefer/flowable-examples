@@ -8,6 +8,7 @@ import java.time.LocalDate;
  * 
  * @author Martin Schäfer
  */
+@JsonVariable
 public class Invoice {
 
 	private String invoiceNumber;

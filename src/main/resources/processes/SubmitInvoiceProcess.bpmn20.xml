@@ -46,7 +46,7 @@
 
 		<sequenceFlow id="saveInvoiceResponseTask-end" sourceRef="saveInvoiceResponseTask" targetRef="end" />
 
-		<serviceTask id="noInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.noInvoiceResponse(invoice.invoiceNumber)}" />
+		<serviceTask id="noInvoiceResponseTask" flowable:async="true" flowable:expression="#{invoiceService.noInvoiceResponse(invoice)}" />
 
 		<sequenceFlow id="noInvoiceResponseTask-end" sourceRef="noInvoiceResponseTask" targetRef="end" />
 	
