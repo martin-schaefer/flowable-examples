@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import ch.schaefer.flowable.process.caseexchange.CaseExchangeProcessStarter;
+import ch.schaefer.flowable.process.caseexchange.CaseExchangeServiceMock;
 
 /**
  * Test cases for the SubmitInvoiceProcess.
@@ -22,6 +23,9 @@ public class CaseExchangeProcessTest {
 	@Autowired
 	private CaseExchangeProcessStarter caseExchangeProcessStarter;
 
+	@Autowired
+	private CaseExchangeServiceMock caseExchangeServiceMock;
+
 	@Test
 	public void executeCaseExchangeProcess_withValidCaseId_shouldSubmitCase() {
 		// given
@@ -32,6 +36,9 @@ public class CaseExchangeProcessTest {
 
 		// --- then
 		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();
+		assertThat(caseExchangeServiceMock.isNoCaseData()).isFalse();
+		assertThat(caseExchangeServiceMock.isSaveCaseData()).isTrue();
+		assertThat(caseExchangeServiceMock.isSubmitCaseData()).isTrue();
 	}
 
 	@Test
@@ -45,9 +52,13 @@ public class CaseExchangeProcessTest {
 
 		// --- then
 		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();
+		assertThat(caseExchangeServiceMock.isNoCaseData()).isTrue();
+		assertThat(caseExchangeServiceMock.isSaveCaseData()).isFalse();
+		assertThat(caseExchangeServiceMock.isSubmitCaseData()).isFalse();
 	}
 
 	public void executeCaseExchangeProces(String caseId) {
+		caseExchangeServiceMock.reset();
 
 		// --- given: caseId
 		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();

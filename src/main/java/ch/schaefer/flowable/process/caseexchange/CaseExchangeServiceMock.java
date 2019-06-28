@@ -55,4 +55,9 @@ public class CaseExchangeServiceMock implements CaseExchangeService {
 		return saveCaseData;
 	}
 
+	public void reset() {
+		noCaseData = false;
+		submitCaseData = false;
+		saveCaseData = false;
+	}
 }
