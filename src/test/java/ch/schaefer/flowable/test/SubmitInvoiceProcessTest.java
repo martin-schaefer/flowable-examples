@@ -1,4 +1,4 @@
-package ch.schaefer.flowable;
+package ch.schaefer.flowable.test;
 
 import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,6 +18,10 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ch.schaefer.flowable.process.invoice.Invoice;
+import ch.schaefer.flowable.process.invoice.InvoiceResponse;
+import ch.schaefer.flowable.process.invoice.InvoiceService;
 
 /**
  * Test cases for the SubmitInvoiceProcess.

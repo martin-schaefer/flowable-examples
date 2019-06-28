@@ -1,0 +1,62 @@
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:flowable="http://flowable.org/bpmn"
+  typeLanguage="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="http://www.flowable.org/processdef">
+
+	<message id="caseClosedMessageRef" name="caseClosedMessage" />
+
+	<process id="CaseExchangeProcess" name="Case Exchange Process" isExecutable="true">
+
+		<startEvent id="start" name="Start" />
+
+		<sequenceFlow id="start-getCaseDataTask" sourceRef="start" targetRef="getCaseDataTask" />
+
+		<serviceTask id="getCaseDataTask" flowable:async="true" flowable:expression="#{caseExchangeService.getCaseData(caseId)}" flowable:resultVariable="caseData">
+			<extensionElements>
+				<flowable:failedJobRetryTimeCycle>R3/PT1S</flowable:failedJobRetryTimeCycle>
+			</extensionElements>
+		</serviceTask>
+
+		<sequenceFlow id="getCaseDataTask-caseDataReceivedGateway" sourceRef="getCaseDataTask" targetRef="caseDataReceivedGateway" />
+
+		<exclusiveGateway id="caseDataReceivedGateway" name="Case Data Received Gateway" />
+
+			<sequenceFlow id="caseDataRecivedGateway-saveCaseDataTask" sourceRef="caseDataReceivedGateway" targetRef="saveCaseDataTask">
+				<conditionExpression xsi:type="tFormalExpression">${variables:exists(caseData)}</conditionExpression>
+			</sequenceFlow>
+		
+			<sequenceFlow id="caseDataReceivedGateway-noInvoiceResponseTask" sourceRef="caseDataReceivedGateway" targetRef="noCaseDataTask" />
+
+		<serviceTask id="noCaseDataTask" flowable:async="true" flowable:expression="#{caseExchangeService.noCaseData(caseId)}" />
+
+		<sequenceFlow id="noInvoiceResponseTask-end" sourceRef="noCaseDataTask" targetRef="end" />
+
+		<serviceTask id="saveCaseDataTask" flowable:async="true" flowable:expression="#{caseExchangeService.saveCaseData(caseData)}" />
+
+		<sequenceFlow id="saveCaseDataTask-catchCaseClosedEvent" sourceRef="saveCaseDataTask" targetRef="catchCaseClosedEvent" />
+
+		<!-- Wait until the case is closed, then submit case data -->
+		<intermediateCatchEvent id="catchCaseClosedEvent">
+			<messageEventDefinition messageRef="caseClosedMessageRef" />
+		</intermediateCatchEvent>
+
+		<boundaryEvent id="caseClosedTimeout" cancelActivity="true" attachedToRef="catchCaseClosedEvent">
+			<timerEventDefinition>
+				<timeDuration>PT1S</timeDuration>
+			</timerEventDefinition>
+		</boundaryEvent>
+
+		<sequenceFlow id="catchCaseClosedEvent-submitCaseDataTask" sourceRef="catchCaseClosedEvent" targetRef="submitCaseDataTask" />
+
+		<serviceTask id="submitCaseDataTask" flowable:async="true" flowable:expression="#{caseExchangeService.submitCaseData(caseData)}" />
+
+		<sequenceFlow id="submitCaseDataTask-end" sourceRef="submitCaseDataTask" targetRef="end" />
+
+		<!-- This is the end, my friend -->	
+		<endEvent id="end" name="End" />
+
+	</process>
+
+</definitions>

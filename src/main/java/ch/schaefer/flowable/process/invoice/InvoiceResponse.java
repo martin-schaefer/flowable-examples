@@ -1,4 +1,4 @@
-package ch.schaefer.flowable;
+package ch.schaefer.flowable.process.invoice;
 
 /**
  * The InvoiceResponse is fired as message on the SubmitInvoiceProcess and used as JSON process variable.

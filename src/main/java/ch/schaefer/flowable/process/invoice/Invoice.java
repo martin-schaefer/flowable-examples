@@ -1,4 +1,4 @@
-package ch.schaefer.flowable;
+package ch.schaefer.flowable.process.invoice;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
