@@ -1,16 +1,14 @@
 package ch.schaefer.flowable.test;
 
-import org.flowable.engine.ManagementService;
-import org.flowable.engine.RuntimeService;
-import org.flowable.engine.runtime.Execution;
-import org.flowable.engine.runtime.ProcessInstance;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import ch.schaefer.flowable.process.caseexchange.CaseExchangeService;
+import ch.schaefer.flowable.process.caseexchange.CaseExchangeProcessStarter;
 
 /**
  * Test cases for the SubmitInvoiceProcess.
@@ -22,61 +20,49 @@ import ch.schaefer.flowable.process.caseexchange.CaseExchangeService;
 public class CaseExchangeProcessTest {
 
 	@Autowired
-	private RuntimeService runtimeService;
-
-	@Autowired
-	private ManagementService managementService;
-
-	@Autowired
-	private CaseExchangeService caseExchangeService;
+	private CaseExchangeProcessStarter caseExchangeProcessStarter;
 
 	@Test
 	public void executeCaseExchangeProcess_withValidCaseId_shouldSubmitCase() {
+		// given
+		String caseId = "001";
 
-		executeCaseExchangeProces("001");
+		// when
+		executeCaseExchangeProces(caseId);
+
+		// --- then
+		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();
 	}
 
 	@Test
 	public void executeCaseExchangeProcess_withInvalidCaseId_shouldNotSubmitCase() {
 
-		executeCaseExchangeProces("invalid");
+		// given
+		String caseId = "invalid";
+
+		// when
+		executeCaseExchangeProces(caseId);
+
+		// --- then
+		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();
 	}
 
 	public void executeCaseExchangeProces(String caseId) {
 
 		// --- given: caseId
+		assertThat(caseExchangeProcessStarter.isRunning(caseId)).isFalse();
 
 		// --- when
-		ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder()
-				.processDefinitionKey("CaseExchangeProcess").businessKey(caseId).variable("caseId", caseId).start();
-
-		waitForGetCaseDataTaskCompletion(processInstance);
+		caseExchangeProcessStarter.start(caseId);
 
 		// Let some time pass before the case is closed
 		sleep(500);
 
 		// Find the execution waiting for the caseClosedMessage
-		Execution execution = runtimeService.createExecutionQuery().processInstanceBusinessKey(caseId, true)
-				.messageEventSubscriptionName("caseClosedMessage").singleResult();
+		caseExchangeProcessStarter.fireCaseClosedEvent(caseId);
 
-		// fire the caseClosedMessage event to the execution
-		if (execution != null) {
-			runtimeService.messageEventReceived("caseClosedMessage", execution.getId());
-		}
-		// wait until the process terminates
-		do {
-			sleep(100);
-		} while (runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count() != 0);
+		sleep(100);
 
-		// --- then
-
-	}
-
-	private void waitForGetCaseDataTaskCompletion(ProcessInstance processInstance) {
-		do {
-			sleep(200);
-		} while (runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).list().stream()
-				.filter(e -> "getCaseDataTask".equals(e.getActivityId())).findFirst().isPresent());
 	}
 
 	private void sleep(long millis) {
